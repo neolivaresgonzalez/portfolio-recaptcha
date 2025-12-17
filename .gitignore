@@ -1,0 +1,97 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+.pytype/
+.tox/
+.nox/
+.ipynb_checkpoints/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Lambda packaging artifacts
+*.zip
+package/
+packages/
+.layer/
+layers/.build/
+.lambda-build/
+.aws-sam/
+.serverless/
+
+# Logs
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# =========================
+# Terraform
+# =========================
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl  # Si quieres reproducibilidad, CONVIENE versionarlo (ver nota abajo)
+
+# Terraform plan outputs
+*.tfplan
+*.tfplan.*
+plan.out
+
+# Local variable files (often contain secrets)
+*.tfvars
+*.tfvars.json
+
+# =========================
+# AWS / Credentials
+# =========================
+.aws/
+**/.aws/
+*credentials*
+*credential*
+*secrets*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Env files (secrets)
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# =========================
+# Misc
+# =========================
+tmp/
+temp/
+.cache/
