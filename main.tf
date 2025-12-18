@@ -1,3 +1,20 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
+  }
+}
+
 provider "aws" {
   region = "ca-central-1" # You can change this
 }
@@ -8,18 +25,39 @@ variable "recaptcha_secret_key" {
   sensitive   = true
 }
 
+variable "jira_domain" {
+  type        = string
+  description = "Jira Cloud Domain (e.g. your-site.atlassian.net)"
+}
+
+variable "jira_email" {
+  type        = string
+  description = "Email used for Jira Auth"
+}
+
+variable "jira_api_token" {
+  type        = string
+  description = "Jira API Token"
+  sensitive   = true
+}
+
+variable "jira_project_key" {
+  type        = string
+  description = "Project Key for Jira Issues"
+}
+
 resource "random_id" "bucket_suffix" {
   byte_length = 8
 }
 
 # S3 Bucket for Logs
 resource "aws_s3_bucket" "log_bucket" {
-  bucket = "portfolio-recaptcha-logs-${random_id.bucket_suffix.hex}"
+  bucket = "portfolio-logs-${random_id.bucket_suffix.hex}"
 }
 
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "portfolio_recaptcha_lambda_role"
+  name = "portfolio_lambda_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -35,7 +73,7 @@ resource "aws_iam_role" "lambda_role" {
 
 # IAM Policy for Logging and S3 Access
 resource "aws_iam_role_policy" "lambda_policy" {
-  name = "portfolio_recaptcha_lambda_policy"
+  name = "portfolio_lambda_policy"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
@@ -81,6 +119,10 @@ resource "aws_lambda_function" "recaptcha_lambda" {
     variables = {
       RECAPTCHA_SECRET_KEY = var.recaptcha_secret_key
       LOG_BUCKET_NAME      = aws_s3_bucket.log_bucket.bucket
+      JIRA_DOMAIN          = var.jira_domain
+      JIRA_EMAIL           = var.jira_email
+      JIRA_API_TOKEN       = var.jira_api_token
+      JIRA_PROJECT_KEY     = var.jira_project_key
     }
   }
 }
@@ -91,13 +133,34 @@ resource "aws_lambda_function_url" "lambda_url" {
   authorization_type = "NONE"
 
   cors {
-    allow_credentials = true
+    allow_credentials = false
     allow_origins     = ["*"]
-    allow_methods     = ["POST", "OPTIONS"]
+    allow_methods     = ["POST", "GET"]
     allow_headers     = ["date", "keep-alive", "content-type"]
     expose_headers    = ["keep-alive", "date"]
     max_age           = 86400
   }
+}
+
+# Required since Oct 2025: allow invoking the Function URL
+resource "aws_lambda_permission" "function_url_allow_public_access" {
+  statement_id          = "FunctionURLAllowPublicAccess"
+  action                = "lambda:InvokeFunctionUrl"
+  function_name         = aws_lambda_function.recaptcha_lambda.function_name
+  principal             = "*"
+  function_url_auth_type = "NONE"
+
+  depends_on = [aws_lambda_function_url.lambda_url]
+}
+
+# Required since Oct 2025: also allow InvokeFunction
+resource "aws_lambda_permission" "function_url_allow_invoke_function" {
+  statement_id  = "FunctionURLInvokeAllowPublicAccess"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.recaptcha_lambda.function_name
+  principal     = "*"
+
+  depends_on = [aws_lambda_function_url.lambda_url]
 }
 
 output "function_url" {
